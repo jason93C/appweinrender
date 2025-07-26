@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Siembraveci!</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-image: url("{{ url_for('static', filename='images/pexels-cottonbro-4505162.jpg') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            height: 100vh;
+            margin: 0;
+        }
+
+        form{
+            border-width: 100px; max-width: 600px; width: 90%;
+            border:solid;
+            box-shadow: 0 0 50px rgba(7, 5, 5, 1);
+        }
+        .form-container {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+    </style>
+</head>
+<body>
+    <div class=" container d-flex justify-content-center align-items-center vh-100 " >
+    <form class="px-4 py-3 form-container row g-3 bg-transparent text-dark d-flex justify-content-center align-items-center" method="POST" action="/registro">
+        <div class="row mb-3">
+            <label for="exampleDropdownFormEmail1" class="form-label">Email address</label>
+            <input type="email" class="form-control" id="exampleDropdownFormEmail1" name"email" placeholder="email@example.com">
+        </div>
+        <div class="row mb-3">
+            <label for="exampleDropdownFormPassword1" class="form-label">Password</label>
+            <input type="password" class="form-control" id="exampleDropdownFormPassword1"name="password" placeholder="Password">
+        </div>
+        <div class="row mb-3">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="dropdownCheck" name="remember">
+                <label class="form-check-label" for="dropdownCheck">recuerda me</label>
+            </div>
+        </div>
+            <button type="submit" class=" btn btn-primary">iniciar secion</button>
+    
+        <div class="row mt-2">
+                <a class="dropdown-item" href="index.html">Registrate</a>
+                <a class="dropdown-item" href="#">Contraseña olvidada?click aqui</a>
+    </div>
+    </form>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js" integrity="sha384-ndDqU0Gzau9qJ1lfW4pNLlhNTkCfHzAVBReH9diLvGRem5+R9g2FzA8ZGN954O5Q" crossorigin="anonymous"></script>
+
+
+</body>
+</html>
