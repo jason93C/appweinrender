@@ -23,6 +23,35 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
+class MyAdminIndexView(AdminIndexView):
+    def is_accessible(self):
+        return session.get('admin_logged_in')
+
+    def inaccessible_callback(self, name, **kwargs):
+        return redirect(url_for('admin_login'))
+
+# Vista protegida para cada modelo
+class SecureModelView(ModelView):
+    def is_accessible(self):
+        return session.get('admin_logged_in')
+
+    def inaccessible_callback(self, name, **kwargs):
+        return redirect(url_for('admin_login'))
+    def render(self, template, **kwargs):
+        # Agrega el botón de logout en la esquina superior derecha
+        kwargs['logout_button'] = Markup('<a class="btn btn-danger" href="/admin/logout">Cerrar sesión</a>')
+        return super().render(template, **kwargs)
+
+class Usuario(db.Model):
+    __tablename__ = 'usuario'
+    id = db.Column(db.Integer, primary_key=True)
+    nombre = db.Column(db.String(100), nullable=False)
+    apellido = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), nullable=False, unique=True)
+    password = db.Column(db.String(200), nullable=False)
+    id_Role = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
+
+
 class Producto(db.Model):
     __tablename__ = 'producto'
     id = db.Column(db.Integer, primary_key=True)
@@ -30,28 +59,22 @@ class Producto(db.Model):
     Categoria_id = db.Column(db.Integer, db.ForeignKey('categoria.id'), nullable=False)
     descripcion = db.Column(db.Text, nullable=True)
     imagen = db.Column(db.String(200), nullable=True)
-    valor = db.Column(db.Float, nullable=False)
+    precio = db.Column(db.Numeric, nullable=False)
 
 
-class user(db.Model):
-    __tablename__ = 'user'
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(100), nullable=False, unique=True)
-    password = db.Column(db.String(100), nullable=False)
-    role_id = db.Column(db.Integer, db.ForeignKey('role.id'))
+
 
 
 class Role(db.Model):
     __tablename__ = 'role'
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(50), nullable=False, unique=True)
-    users = db.relationship(lambda: user, backref='role')
+    Usuario = db.Column(db.String(50), nullable=False, unique=True)
 
         
 
 class cliente(db.Model):
-    __tablase__ = 'cliente'
+    __tablename__ = 'cliente'
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), nullable=False, unique=True)
@@ -84,7 +107,7 @@ class pagos(db.Model):
     __tablename__ = 'pagos'
     id = db.Column(db.Integer, primary_key=True)
     metodo = db.Column(db.String(50), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    id_Usuario = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
 
 
 class inventario(db.Model):
@@ -103,7 +126,7 @@ class inventario(db.Model):
 
     admin = Admin(app, name='panel de administracion', template_mode='bootstrap3')
     admin.add_view(ModelView(Producto, db.session))
-    admin.add_view(ModelView(user, db.session))
+    admin.add_view(ModelView(Usuario, db.session))
     admin.add_view(ModelView(cliente, db.session))
     admin.add_view(ModelView(Categoria, db.session))
     admin.add_view(ModelView(order, db.session))
@@ -111,42 +134,37 @@ class inventario(db.Model):
     admin.add_link(MenuLink(name='Cerrar sesión', category='', url='/admin/logout'))
 
 class ProductoAdmin(ModelView):
-    # Personaliza el campo imagen para que permita subir archivos
     form_extra_fields = {
         'imagen': ImageUploadField('Imagen del producto',
             base_path=os.path.join(os.getcwd(), 'static', 'uploads'),
             relative_path='uploads/',
             url_relative_path='static/uploads/')
     }
+
+    form_columns = ['nombre', 'descripcion', 'imagen', 'precio', 'Categoria_id']
+
     form_overrides = {
-        'id_categoria': SelectField
+    "nombre": "Producto A",
+    "descripcion": "Algo",
+    "precio": 1234,
+    "Categoria_id": 1
     }
 
-    form_columns = ['nombre', 'descripcion', 'imagen', 'precio', 'id_categoria']
-
-    # Sobrescribimos el tipo de campo
-    form_overrides = {
-        'id_categoria': SelectField
-    }
-
-    # Configuramos el comportamiento del SelectField
     form_args = {
-        'id_categoria': {
+        'Categoria_id': {
             'coerce': int,
             'label': 'Categoría'
         }
     }
 
-    # Llenamos las opciones para el campo select (crear)
     def create_form(self, obj=None):
         form = super().create_form(obj)
-        form.id_categoria.choices = [(c.id_categoria, c.nom_categoria) for c in Categoria.query.all()]
+        form.Categoria_id.choices = [(c.id, c.nombre) for c in Categoria.query.all()]
         return form
 
-    # Llenamos las opciones para el campo select (editar)
     def edit_form(self, obj=None):
         form = super().edit_form(obj)
-        form.id_categoria.choices = [(c.id_categoria, c.nom_categoria) for c in Categoria.query.all()]
+        form.Categoria_id.choices = [(c.id, c.nombre) for c in Categoria.query.all()]
         return form
 
 @app.route("/agregar", methods=["POST"])
@@ -156,7 +174,7 @@ def agregar_producto():
         nombre=data["nombre"],
         descripcion=data["descripcion"],
         precio=data["precio"],
-        id_categoria=data["id_categoria"]
+        Categoria_id=data["Categoria_id"],
     )
     db.session.add(nuevo)
     db.session.commit()
@@ -175,7 +193,7 @@ def login():
         email = request.form["email"]
         password = request.form["password"]
 
-        usuario = user.query.filter_by(email=email).first()
+        usuario = Usuario.query.filter_by(email=email).first()
         if usuario and check_password_hash(usuario.password, password):
             login_user(usuario)
             return redirect(url_for("home"))
@@ -187,7 +205,9 @@ def login():
 def page():
     return render_template("productos.html")
 
-
+@app.route('/blog')
+def blog():
+    return render_template("blog.html")
 
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
@@ -240,10 +260,15 @@ def admin_login():
             error = 'Usuario o contraseña incorrectos'
     
     return render_template('admin_login.html')
+
 @app.route('/admin/logout')
 def admin_logout():
     session.pop('admin_logged_in', None)
     return redirect(url_for('admin_login'))
+
+
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)
