@@ -15,4 +15,3 @@ with app.app_context():
         db.session.add(nuevo_usuario)
         db.session.commit()
         print("✅ Usuario admin creado con éxito.")
-        

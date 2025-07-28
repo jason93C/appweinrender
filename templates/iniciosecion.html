@@ -33,14 +33,15 @@
 </head>
 <body>
     <div class=" container d-flex justify-content-center align-items-center vh-100 " >
-    <form class="px-4 py-3 form-container row g-3 bg-transparent text-dark d-flex justify-content-center align-items-center" method="POST" action="/registro">
+        
+    <form class="px-4 py-3 form-container row g-3 bg-transparent text-dark d-flex justify-content-center align-items-center" method="POST" action="/login" enctype="multipart/form-data">
         <div class="row mb-3">
             <label for="exampleDropdownFormEmail1" class="form-label">Email address</label>
-            <input type="email" class="form-control" id="exampleDropdownFormEmail1" name"email" placeholder="email@example.com">
+            <input type="email" class="form-control" id="exampleDropdownFormEmail1" name="email" placeholder="email@example.com">
         </div>
         <div class="row mb-3">
             <label for="exampleDropdownFormPassword1" class="form-label">Password</label>
-            <input type="password" class="form-control" id="exampleDropdownFormPassword1"name="password" placeholder="Password">
+            <input type="password" class="form-control" id="exampleDropdownFormPassword1" name="password" placeholder="Password">
         </div>
         <div class="row mb-3">
             <div class="form-check">
@@ -48,10 +49,10 @@
                 <label class="form-check-label" for="dropdownCheck">recuerda me</label>
             </div>
         </div>
-            <button type="submit" class=" btn btn-primary">iniciar secion</button>
+            <button type="submit" class=" btn btn-primary">Iniciar sesión</button>
     
         <div class="row mt-2">
-                <a class="dropdown-item" href="index.html">Registrate</a>
+                <a class="dropdown-item" href="{{ url_for('registro') }}">Regístrate</a>
                 <a class="dropdown-item" href="#">Contraseña olvidada?click aqui</a>
     </div>
     </form>

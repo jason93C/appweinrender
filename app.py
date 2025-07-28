@@ -13,13 +13,17 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from flask import request, render_template, redirect, url_for, flash
 
+
+
+
+
 app = Flask(__name__)
 app.secret_key = 'ja593one.'
 
-
-app.config['SECRET_KEY'] = 'mi_clave_secreta'  # Necesario para Flask-Admin
+# Necesario para Flask-Admin
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:ja593one.@localhost/app_siembraveci'  
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = os.path.join('static','upload')
 
 db = SQLAlchemy(app)
 
@@ -48,7 +52,8 @@ class Usuario(db.Model):
     nombre = db.Column(db.String(100), nullable=False)
     apellido = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), nullable=False, unique=True)
-    password = db.Column(db.String(200), nullable=False)
+    username = db.Column(db.String(100), nullable=False, unique=True)
+    Password = db.Column(db.String(200), nullable=False)
     id_Role = db.Column(db.Integer, db.ForeignKey('role.id'), nullable=False)
 
 
@@ -56,11 +61,11 @@ class Producto(db.Model):
     __tablename__ = 'producto'
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
-    Categoria_id = db.Column(db.Integer, db.ForeignKey('categoria.id'), nullable=False)
     descripcion = db.Column(db.Text, nullable=True)
     imagen = db.Column(db.String(200), nullable=True)
     precio = db.Column(db.Numeric, nullable=False)
-
+    id_Categoria = db.Column(db.Integer, db.ForeignKey('categoria.id'))  # <- Asegúrate de esto
+    
 
 
 
@@ -69,11 +74,11 @@ class Role(db.Model):
     __tablename__ = 'role'
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(50), nullable=False, unique=True)
-    Usuario = db.Column(db.String(50), nullable=False, unique=True)
+    id_Usuario = db.Column(db.String(50), nullable=False, unique=True)
 
         
 
-class cliente(db.Model):
+class Cliente(db.Model):
     __tablename__ = 'cliente'
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
@@ -90,30 +95,30 @@ class Categoria(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
 
-class order(db.Model):
+class Orden(db.Model):
     __tablename__ = 'order'
     id = db.Column(db.Integer, primary_key=True)
-    cliente_id = db.Column(db.Integer, db.ForeignKey('cliente.id'), nullable=False)
-    producto_id = db.Column(db.Integer, db.ForeignKey('producto.id'), nullable=False)
+    id_Cliente = db.Column(db.Integer, db.ForeignKey('cliente.id'), nullable=False)
+    id_Producto = db.Column(db.Integer, db.ForeignKey('producto.id'), nullable=False)
     cantidad = db.Column(db.Integer, nullable=False)
     fecha_salida = db.Column(db.DateTime,nullable=False)
     estado = db.Column(db.String(50), nullable=False)
     total = db.Column(db.Float, nullable=False)
-    pago_id = db.Column(db.Integer, db.ForeignKey('pagos.id'), nullable=False)
+    id_pago = db.Column(db.Integer, db.ForeignKey('pagos.id'), nullable=False)
     
     
             
-class pagos(db.Model):
+class Pagos(db.Model):
     __tablename__ = 'pagos'
     id = db.Column(db.Integer, primary_key=True)
     metodo = db.Column(db.String(50), nullable=False)
     id_Usuario = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=False)
 
 
-class inventario(db.Model):
+class Inventario(db.Model):
     __tablename__ = 'inventarios'
     id = db.Column(db.Integer, primary_key=True)
-    producto_id = db.Column(db.Integer, db.ForeignKey('producto.id'), nullable=False)
+    id_Producto = db.Column(db.Integer, db.ForeignKey('producto.id'), nullable=False)
     cantidad_existentes = db.Column(db.Integer, nullable=False)
     cantidad_entrada = db.Column(db.Integer, nullable=False)
     cantidad_salida = db.Column(db.Integer, nullable=False)
@@ -127,26 +132,26 @@ class inventario(db.Model):
     admin = Admin(app, name='panel de administracion', template_mode='bootstrap3')
     admin.add_view(ModelView(Producto, db.session))
     admin.add_view(ModelView(Usuario, db.session))
-    admin.add_view(ModelView(cliente, db.session))
+    admin.add_view(ModelView(Cliente, db.session))
     admin.add_view(ModelView(Categoria, db.session))
-    admin.add_view(ModelView(order, db.session))
-    admin.add_view(ModelView(pagos, db.session))
+    admin.add_view(ModelView(Orden, db.session))
+    admin.add_view(ModelView(Pagos, db.session))
     admin.add_link(MenuLink(name='Cerrar sesión', category='', url='/admin/logout'))
+
 
 class ProductoAdmin(ModelView):
     form_extra_fields = {
-        'imagen': ImageUploadField('Imagen del producto',
-            base_path=os.path.join(os.getcwd(), 'static', 'uploads'),
+        'imagen': ImageUploadField('Imagen',
+            base_path=os.path.join(os.path.dirname(__file__), 'static/uploads'),
             relative_path='uploads/',
-            url_relative_path='static/uploads/')
+            allow_overwrite=False)
     }
-
-    form_columns = ['nombre', 'descripcion', 'imagen', 'precio', 'Categoria_id']
-
+    form_columns = ['nombre', 'descripcion', 'imagen', 'precio', 'id_Categoria']
+    
     form_overrides = {
-    "nombre": "Producto A",
-    "descripcion": "Algo",
-    "precio": 1234,
+    "nombre": str,
+    "descripcion": str,
+    "precio": float,
     "Categoria_id": 1
     }
 
@@ -156,6 +161,8 @@ class ProductoAdmin(ModelView):
             'label': 'Categoría'
         }
     }
+    
+    
 
     def create_form(self, obj=None):
         form = super().create_form(obj)
@@ -209,6 +216,11 @@ def page():
 def blog():
     return render_template("blog.html")
 
+
+@app.route('/carrito')
+def carrito():
+    return render_template("carrito.html")
+
 @app.route('/registro', methods=['GET', 'POST'])
 def registro():
     if request.method == 'POST':
@@ -241,8 +253,8 @@ def registro():
 
 @app.route('/ventas')
 def ventas():
-    Productos = Producto.query.all()
-    return render_template("ventas.html" ,Productos=Productos)
+    productos = Producto.query.all()
+    return render_template('ventas.html', productos=productos)
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
@@ -271,5 +283,6 @@ def admin_logout():
 
 
 if __name__ == "__main__":
+    os.makedirs(os.path.join(os.getcwd(), 'static/uploads'), exist_ok=True)
+    db.create_all()
     app.run(debug=True)
-
